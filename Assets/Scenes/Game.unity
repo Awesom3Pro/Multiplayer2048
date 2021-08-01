@@ -1638,15 +1638,15 @@ MonoBehaviour:
   - number: 64
     faceSprite: {fileID: 21300000, guid: 9939e9de16bb24c2e83e3abd9118e9c5, type: 3}
   - number: 128
-    faceSprite: {fileID: 21300000, guid: 95065b08c13a94decb27eca48a39e577, type: 3}
+    faceSprite: {fileID: 21300000, guid: 6dfd47254be3c4f24b896454c8ef168b, type: 3}
   - number: 256
-    faceSprite: {fileID: 21300000, guid: a11a25519e3b942a0b99d518b8d1b309, type: 3}
+    faceSprite: {fileID: 21300000, guid: 52a1dd8e513ca4e51bb3c273a1e1ff3e, type: 3}
   - number: 512
-    faceSprite: {fileID: 21300000, guid: 69d3161d8d4e54bccb2ffb229c0e0e25, type: 3}
+    faceSprite: {fileID: 21300000, guid: 7d008199c4beb4f94b9b6da8fd7cc425, type: 3}
   - number: 1024
-    faceSprite: {fileID: 21300000, guid: 4216e454390674b368e6c07eb8fefa47, type: 3}
+    faceSprite: {fileID: 21300000, guid: 86e8d10ec0d6e4ed58b3b7df9f35158c, type: 3}
   - number: 2048
-    faceSprite: {fileID: 21300000, guid: 630c3317a84e243d1bf6a6cba51f1ab8, type: 3}
+    faceSprite: {fileID: 21300000, guid: 821e48baf43ff428f83b072fbcf3e122, type: 3}
 --- !u!4 &1471331694
 Transform:
   m_ObjectHideFlags: 0
@@ -2345,7 +2345,7 @@ MonoBehaviour:
   - {fileID: 1825821942}
   - {fileID: 1749187784}
   state: 0
-  delay: 0.025
+  delay: 0.02
 --- !u!4 &1811117146
 Transform:
   m_ObjectHideFlags: 0

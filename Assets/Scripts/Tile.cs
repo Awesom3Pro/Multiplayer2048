@@ -99,5 +99,7 @@ public class Tile : MonoBehaviour
     private void SetVisible(bool isVisible)
     {
         spriteRenderer.enabled = isVisible;
+        spriteRenderer.DOKill(true);
+        spriteRenderer.DOFade(isVisible ? 1 : 0, 0.1f);
     }
 }
