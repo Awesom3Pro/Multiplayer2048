@@ -130,6 +130,10 @@ public class BoardManager : MonoBehaviour
 
                 tiles[i].IsMerged = true;
 
+                tiles[i].tileTransform.localScale = new Vector2(0.2f, 0.2f);
+
+                tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
+
                 ScoreTracker.Instance.Score += tiles[i].Number;
 
                 return true;
@@ -157,6 +161,10 @@ public class BoardManager : MonoBehaviour
                 tiles[i - 1].Number = 0;
 
                 tiles[i].IsMerged = true;
+
+                tiles[i].tileTransform.localScale = new Vector2(0.2f, 0.2f);
+
+                tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
 
                 ScoreTracker.Instance.Score += tiles[i].Number;
 
