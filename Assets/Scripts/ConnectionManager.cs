@@ -2,70 +2,101 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Realtime;
-public class ConnectionManager : IConnectionCallbacks,IMatchmakingCallbacks
+using Photon.Pun;
+public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallbacks,IMatchmakingCallbacks
 {
-    public void OnConnected()
+    void Start()
     {
-        throw new System.NotImplementedException();
+        if (PhotonNetwork.IsConnectedAndReady)
+        {
+            Debug.Log("ConnectionManager :: Start :: IsConnectedAndReady : True");
+            PhotonNetwork.JoinRandomRoom();
+        }
+        else
+        {
+            Debug.Log("ConnectionManager :: Start :: IsConnectedAndReady : False");
+            if(PhotonNetwork.ConnectUsingSettings())
+            {
+                Debug.Log("ConnectionManager :: Start :: ConnectUsingSettings : True");
+            }
+            else
+            {
+                Debug.Log("ConnectionManager :: Start :: ConnectUsingSettings : False");
+            }
+        }
     }
 
-    public void OnConnectedToMaster()
+    public override void OnConnected()
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnConnected");
     }
 
-    public void OnCreatedRoom()
+    public override void OnConnectedToMaster()
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnConnectedToMaster");
+        PhotonNetwork.JoinRandomRoom();
     }
 
-    public void OnCreateRoomFailed(short returnCode, string message)
+    public override void OnCreatedRoom()
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnCreatedRoom");
     }
 
-    public void OnCustomAuthenticationFailed(string debugMessage)
+    public override void OnCreateRoomFailed(short returnCode, string message)
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnCreateRoomFailed");
     }
 
-    public void OnCustomAuthenticationResponse(Dictionary<string, object> data)
+    public override void OnCustomAuthenticationFailed(string debugMessage)
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnCustomAuthenticationFailed");
     }
 
-    public void OnDisconnected(DisconnectCause cause)
+    public override void OnCustomAuthenticationResponse(Dictionary<string, object> data)
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnCustomAuthenticationResponse");
     }
 
-    public void OnFriendListUpdate(List<FriendInfo> friendList)
+    public override void OnDisconnected(DisconnectCause cause)
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnDisconnected");
     }
 
-    public void OnJoinedRoom()
+    public override void OnFriendListUpdate(List<FriendInfo> friendList)
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnFriendListUpdate");
     }
 
-    public void OnJoinRandomFailed(short returnCode, string message)
+    public override void OnJoinedRoom()
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnJoinedRoom :: " + PhotonNetwork.CurrentRoom.Name);
     }
 
-    public void OnJoinRoomFailed(short returnCode, string message)
+    public override void OnJoinRandomFailed(short returnCode, string message)
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnJoinRandomFailed");
+
+        Debug.Log("Creating Room");
+        CreateRoom();
     }
 
-    public void OnLeftRoom()
+    void CreateRoom()
     {
-        throw new System.NotImplementedException();
+        PhotonNetwork.CreateRoom(null, new RoomOptions());
     }
 
-    public void OnRegionListReceived(RegionHandler regionHandler)
+    public override void OnJoinRoomFailed(short returnCode, string message)
     {
-        throw new System.NotImplementedException();
+        Debug.Log("ConnectionManager :: OnJoinRoomFailed");
+    }
+
+    public override void OnLeftRoom()
+    {
+        Debug.Log("ConnectionManager :: OnLeftRoom");
+    }
+
+    public override void OnRegionListReceived(RegionHandler regionHandler)
+    {
+        Debug.Log("ConnectionManager :: OnRegionListReceived");
     }
 }
