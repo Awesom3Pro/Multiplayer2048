@@ -22,6 +22,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
             else
             {
                 Debug.Log("ConnectionManager :: Start :: ConnectUsingSettings : False");
+                //TODO: Handle this case
             }
         }
     }
@@ -34,6 +35,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     public override void OnConnectedToMaster()
     {
         Debug.Log("ConnectionManager :: OnConnectedToMaster");
+        PhotonNetwork.AutomaticallySyncScene = true;
         PhotonNetwork.JoinRandomRoom();
     }
 
@@ -82,7 +84,8 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
 
     void CreateRoom()
     {
-        PhotonNetwork.CreateRoom(null, new RoomOptions());
+        RoomOptions roomOptions = new RoomOptions() { MaxPlayers = 2 };
+        PhotonNetwork.CreateRoom(null, roomOptions);
     }
 
     public override void OnJoinRoomFailed(short returnCode, string message)
@@ -92,11 +95,51 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
 
     public override void OnLeftRoom()
     {
-        Debug.Log("ConnectionManager :: OnLeftRoom");
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Lobby");
     }
 
     public override void OnRegionListReceived(RegionHandler regionHandler)
     {
         Debug.Log("ConnectionManager :: OnRegionListReceived");
+    }
+
+    public void LeaveRoom()
+    {
+        Debug.Log("ConnectionManager :: LeaveRoom");
+        PhotonNetwork.LeaveRoom();
+    }
+
+    void LoadGameScene()
+    {
+        if(!PhotonNetwork.IsMasterClient)
+        {
+            Debug.Log("ConnectionManager :: LoadGameScene :: Not MasterClient. Returning from LoadGame method.");
+            return;
+        }
+
+        PhotonNetwork.LoadLevel("Game");
+    }
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        Debug.LogFormat("ConnectionManager :: OnPlayerEnteredRoom :: {0} entered room", newPlayer.NickName);
+
+        Room room = PhotonNetwork.CurrentRoom;
+        if (room.PlayerCount == room.MaxPlayers)
+        {
+            LoadGameScene();
+        }
+    }
+
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        Debug.LogFormat("ConnectionManager :: OnPlayerLeftRoom :: {0} left room", otherPlayer.NickName);
+
+        Room room = PhotonNetwork.CurrentRoom;
+        if (room.PlayerCount <= 1)
+        {
+            //TODO: Show win screen/ some UI to denote as last player in room
+            LeaveRoom();
+        }
     }
 }
