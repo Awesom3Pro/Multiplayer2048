@@ -4,7 +4,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using DG.Tweening;
-public class BoardManager : MonoBehaviour
+using Photon.Realtime;
+using Photon.Pun;
+using ExitGames.Client.Photon;
+
+public class BoardManager : MonoBehaviour, IOnEventCallback
 {
     public List<Tile> onedimTiles = new List<Tile>();
 
@@ -22,6 +26,8 @@ public class BoardManager : MonoBehaviour
 
     private bool[] animationComplete = new bool[4] { true, true, true, true };
 
+    const byte TileCreatedEventCode = 1;
+    
     [Range(0.0f, 10f)]
     public float delay = 0.05f;
 
@@ -33,6 +39,16 @@ public class BoardManager : MonoBehaviour
     private void Start()
     {
         OnGameStart();
+    }
+
+    void OnEnable()
+    {
+        PhotonNetwork.AddCallbackTarget(this);
+    }
+
+    void OnDisable()
+    {
+        PhotonNetwork.RemoveCallbackTarget(this);
     }
 
     private void OnGameStart()
@@ -136,6 +152,8 @@ public class BoardManager : MonoBehaviour
 
                 ScoreTracker.Instance.Score += tiles[i].Number;
 
+                RaiseTileCreatedEvent(tiles[i].Number);
+
                 return true;
             }
         }
@@ -167,6 +185,8 @@ public class BoardManager : MonoBehaviour
                 tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
 
                 ScoreTracker.Instance.Score += tiles[i].Number;
+
+                RaiseTileCreatedEvent(tiles[i].Number);
 
                 return true;
             }
@@ -441,6 +461,24 @@ public class BoardManager : MonoBehaviour
         if(Input.GetKeyDown(KeyCode.A))
         {
             Shuffle();
+        }
+    }
+
+    void RaiseTileCreatedEvent(int tileVlaue)
+    {
+        object content = tileVlaue;
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+        PhotonNetwork.RaiseEvent(TileCreatedEventCode, content, raiseEventOptions, SendOptions.SendReliable);
+    }
+
+    public void OnEvent(EventData photonEvent)
+    {
+        switch(photonEvent.Code)
+        {
+            case TileCreatedEventCode:
+                int tileValue = (int)photonEvent.CustomData;
+                Debug.LogErrorFormat("Tile Created Event Received. Sender {0} Tile Value {1}", photonEvent.Sender, tileValue);
+                break;
         }
     }
 }
