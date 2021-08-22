@@ -7,6 +7,7 @@ using DG.Tweening;
 using Photon.Realtime;
 using Photon.Pun;
 using ExitGames.Client.Photon;
+using Newtonsoft.Json;
 
 public class BoardManager : MonoBehaviour, IOnEventCallback
 {
@@ -96,8 +97,10 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     {
         SceneManager.LoadScene(0);
     }
-    private void Generate()
+    private GenerateTileStruc Generate(int z = -1)
     {
+        GenerateTileStruc struc = new GenerateTileStruc();
+
         if (emptyTiles.Count > 0)
         {
             int x = UnityEngine.Random.Range(0, emptyTiles.Count); ;
@@ -111,6 +114,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             {
                 randomNum = 2;
             }
+            randomNum = z == -1 ? randomNum : z;
+
             emptyTiles[x].Number = randomNum;
 
             emptyTiles[x].tileTransform.localScale = new Vector2(0.2f, 0.2f);
@@ -118,11 +123,17 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             emptyTiles[x].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
 
             emptyTiles.RemoveAt((x));
+
+            struc.TileNumber = randomNum;
+
+            struc.TileIndex = x;
         }
         else
         {
             Debug.LogError("Out of Empty Tiles");
         }
+
+        return struc;
     }
 
     private bool MakeOneMoveDown(Tile[] tiles)
@@ -151,8 +162,6 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
                 tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
 
                 ScoreTracker.Instance.Score += tiles[i].Number;
-
-                RaiseTileCreatedEvent(tiles[i].Number);
 
                 return true;
             }
@@ -185,8 +194,6 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
                 tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
 
                 ScoreTracker.Instance.Score += tiles[i].Number;
-
-                RaiseTileCreatedEvent(tiles[i].Number);
 
                 return true;
             }
@@ -293,6 +300,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
                 if (flag)
                 {
+                   
                     UpdateEmptyTiles();
                     Generate();
 
@@ -370,23 +378,32 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             yield return null;
         }
 
-        if(flag)
+        MessageStruc struc = new MessageStruc();
+
+        struc.lastDirection = dir;
+
+        if (flag)
         {
             UpdateEmptyTiles();
-            Generate();
+
+            GenerateTileStruc tileStruc = Generate();
+
+            struc.lastStruc = tileStruc;
+        }
+
+        if (!RaiseTileCreatedEvent(struc))
+        {
+            Debug.LogError("Event couldn't be sent");
         }
 
         if (!CanMove())
         {
-            // Ask for Shuffle Popup
-
-            Debug.LogError("GameOver");
+            state = GameState.GameOver;
         }
         else
         {
             state = GameState.Playing;
         }
-
     }
 
     public void Shuffle()
@@ -464,11 +481,11 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         }
     }
 
-    void RaiseTileCreatedEvent(int tileVlaue)
+    bool RaiseTileCreatedEvent(MessageStruc tileStruc)
     {
-        object content = tileVlaue;
+        object struc = JsonConvert.SerializeObject(tileStruc);
         RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
-        PhotonNetwork.RaiseEvent(TileCreatedEventCode, content, raiseEventOptions, SendOptions.SendReliable);
+        return PhotonNetwork.RaiseEvent(TileCreatedEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
     }
 
     public void OnEvent(EventData photonEvent)
@@ -476,8 +493,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         switch(photonEvent.Code)
         {
             case TileCreatedEventCode:
-                int tileValue = (int)photonEvent.CustomData;
-                Debug.LogErrorFormat("Tile Created Event Received. Sender {0} Tile Value {1}", photonEvent.Sender, tileValue);
+                MessageStruc tileValue = JsonConvert.DeserializeObject<MessageStruc>((string)photonEvent.CustomData);
+                Debug.LogErrorFormat("Tile Created Event Received. Sender {0}, Swipe Direction : {1}, Tile Index : {2}, Tile Number :{3} ", photonEvent.Sender,tileValue.lastDirection,tileValue.lastStruc.TileIndex,tileValue.lastStruc.TileNumber );
                 break;
         }
     }
