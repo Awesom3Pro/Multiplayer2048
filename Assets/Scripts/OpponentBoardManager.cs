@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.SceneManagement;
 using DG.Tweening;
-using Photon.Realtime;
-using Photon.Pun;
 using ExitGames.Client.Photon;
 using Newtonsoft.Json;
+using Photon.Pun;
+using Photon.Realtime;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
-public class BoardManager : MonoBehaviour
+public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
 {
     public List<Tile> onedimTiles = new List<Tile>();
 
@@ -21,26 +21,12 @@ public class BoardManager : MonoBehaviour
 
     private Tile[,] multiTiles = new Tile[4, 4];
 
-    public GameState state = GameState.None;
-
     private bool flag = false;
 
     private bool[] animationComplete = new bool[4] { true, true, true, true };
 
-    const byte TileCreatedEventCode = 1;
-    
     [Range(0.0f, 10f)]
     public float delay = 0.05f;
-
-    private void Awake()
-    {
-        InputManager.Instance.OnTouchReceived += ButtonPressed;
-    }
-
-    private void Start()
-    {
-        OnGameStart();
-    }
 
     void OnEnable()
     {
@@ -52,9 +38,9 @@ public class BoardManager : MonoBehaviour
         PhotonNetwork.RemoveCallbackTarget(this);
     }
 
-    private void OnGameStart()
+    private void OnGameStart(int [] tileIndexes,int[] tileValue)
     {
-        ScoreTracker.Instance.Score = 0;
+        OpponentScoreTracker.Instance.Score = 0;
 
         for (int i = 0; i < onedimTiles.Count; i++)
         {
@@ -87,20 +73,8 @@ public class BoardManager : MonoBehaviour
             columns.Add(col.ToArray());
         }
 
-        GenerateTileStruc gt1 = Generate();
-
-        GenerateTileStruc gt2 = Generate();
-
-        int[] tileIndexes = new int[] { gt1.TileIndex, gt2.TileIndex };
-
-        int[] tileValues = new int[] { gt1.TileNumber, gt2.TileNumber };
-
-        GameStartStruc struc = new GameStartStruc();
-        struc.tileIndex = tileIndexes;
-        struc.tileValues = tileValues;
-        RaiseOnGameStartedEvent(struc);
-
-        state = GameState.Playing;
+        Generate(tileValue[0], tileIndexes[0]);
+        Generate(tileValue[1], tileIndexes[1]);
     }
 
     public void Reset()
@@ -173,7 +147,7 @@ public class BoardManager : MonoBehaviour
 
                 tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
 
-                ScoreTracker.Instance.Score += tiles[i].Number;
+                OpponentScoreTracker.Instance.Score += tiles[i].Number;
 
                 return true;
             }
@@ -205,7 +179,7 @@ public class BoardManager : MonoBehaviour
 
                 tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
 
-                ScoreTracker.Instance.Score += tiles[i].Number;
+                OpponentScoreTracker.Instance.Score += tiles[i].Number;
 
                 return true;
             }
@@ -264,62 +238,59 @@ public class BoardManager : MonoBehaviour
         }
         return false;
     }
-    private void ButtonPressed(Direction direction)
+    private void ButtonPressed(Direction direction, int tileIndex, int tileValue)
     {
-        if (state == GameState.Playing)
+        ResetTileMoves();
+
+        flag = false;
+
+        if (delay > 0)
         {
-            ResetTileMoves();
+            StartCoroutine(MoveCoroutine(direction, tileIndex, tileValue));
+        }
+        else
+        {
 
-            flag = false;
-
-            if (delay > 0)
+            for (int i = 0; i < rows.Count; i++)
             {
-                StartCoroutine(MoveCoroutine(direction));
-            }
-            else
-            {
-
-                for (int i = 0; i < rows.Count; i++)
+                switch (direction)
                 {
-                    switch (direction)
-                    {
-                        case Direction.LEFT:
-                            while (MakeOneMoveDown(rows[i]))
-                            {
-                                flag = true;
-                            }
-                            break;
-                        case Direction.RIGHT:
-                            while (MakeOneMoveUp(rows[i]))
-                            {
-                                flag = true;
-                            }
-                            break;
-                        case Direction.DOWN:
-                            while (MakeOneMoveUp(columns[i]))
-                            {
-                                flag = true;
-                            }
-                            break;
-                        case Direction.UP:
-                            while (MakeOneMoveDown(columns[i]))
-                            {
-                                flag = true;
-                            }
-                            break;
-                    }
+                    case Direction.LEFT:
+                        while (MakeOneMoveDown(rows[i]))
+                        {
+                            flag = true;
+                        }
+                        break;
+                    case Direction.RIGHT:
+                        while (MakeOneMoveUp(rows[i]))
+                        {
+                            flag = true;
+                        }
+                        break;
+                    case Direction.DOWN:
+                        while (MakeOneMoveUp(columns[i]))
+                        {
+                            flag = true;
+                        }
+                        break;
+                    case Direction.UP:
+                        while (MakeOneMoveDown(columns[i]))
+                        {
+                            flag = true;
+                        }
+                        break;
                 }
+            }
 
-                if (flag)
+            if (flag)
+            {
+
+                UpdateEmptyTiles();
+                Generate();
+
+                if (!CanMove())
                 {
-                   
-                    UpdateEmptyTiles();
-                    Generate();
-
-                    if (!CanMove())
-                    {
-                        // Ask shuffle
-                    }
+                    // Ask shuffle
                 }
             }
         }
@@ -329,7 +300,7 @@ public class BoardManager : MonoBehaviour
     {
         animationComplete[index] = false;
 
-        while(MakeOneMoveUp(tiles))
+        while (MakeOneMoveUp(tiles))
         {
             flag = true;
 
@@ -353,10 +324,8 @@ public class BoardManager : MonoBehaviour
         animationComplete[index] = true;
     }
 
-    private IEnumerator MoveCoroutine(Direction dir)
+    private IEnumerator MoveCoroutine(Direction dir, int tileIndex, int tileValue)
     {
-        state = GameState.Waiting;
-
         switch (dir)
         {
             case Direction.DOWN:
@@ -390,32 +359,11 @@ public class BoardManager : MonoBehaviour
             yield return null;
         }
 
-        MessageStruc struc = new MessageStruc();
-
-        struc.lastDirection = dir;
-
         if (flag)
         {
             UpdateEmptyTiles();
 
-            GenerateTileStruc tileStruc = Generate();
-
-            struc.lastStruc = tileStruc;
-
-            if (!RaiseTileCreatedEvent(struc))
-            {
-                Debug.LogError("Event couldn't be sent");
-            }
-        }
-
-
-        if (!CanMove())
-        {
-            state = GameState.GameOver;
-        }
-        else
-        {
-            state = GameState.Playing;
+            Generate(tileValue, tileIndex);
         }
     }
 
@@ -426,8 +374,6 @@ public class BoardManager : MonoBehaviour
 
     private IEnumerator ShuffleCoroutine()
     {
-        state = GameState.Waiting;
-
         for (int x = 0; x < onedimTiles.Count; x++)
         {
             for (int y = x + 1; y < onedimTiles.Count; y++)
@@ -467,7 +413,6 @@ public class BoardManager : MonoBehaviour
             end--;
             yield return new WaitForSeconds(delay);
         }
-        state = GameState.Playing;
     }
 
     private bool IsAnimationCompleted()
@@ -486,26 +431,21 @@ public class BoardManager : MonoBehaviour
         return complete;
     }
 
-    bool RaiseTileCreatedEvent(MessageStruc tileStruc)
+    public void OnEvent(EventData photonEvent)
     {
-        object struc = JsonConvert.SerializeObject(tileStruc);
-        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
-        return PhotonNetwork.RaiseEvent(TileCreatedEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
-    }
+        switch (photonEvent.Code)
+        {
+            case Constants.TileCreatedEventCode:
+                Debug.LogError("Getting Move Command");
+                MessageStruc tileValue = JsonConvert.DeserializeObject<MessageStruc>((string)photonEvent.CustomData);
+                ButtonPressed(tileValue.lastDirection, tileValue.lastStruc.TileIndex, tileValue.lastStruc.TileNumber);
+           break;
+            case Constants.OnGameStartEventCode:
+                Debug.LogError("Opponent Game Initiated");
+                GameStartStruc startValues = JsonConvert.DeserializeObject<GameStartStruc>((string)photonEvent.CustomData);
+                OnGameStart(startValues.tileIndex, startValues.tileValues);
+                break; 
 
-    bool RaiseOnGameStartedEvent(GameStartStruc gameStruc)
-    {
-        Debug.LogError("Raised Game Started Event");
-        object struc = JsonConvert.SerializeObject(gameStruc);
-        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
-        return PhotonNetwork.RaiseEvent(Constants.OnGameStartEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
+        }
     }
-}
-
-public enum GameState
-{
-    None,
-    Playing,
-    Waiting,
-    GameOver
 }
