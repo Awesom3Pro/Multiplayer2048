@@ -7,6 +7,7 @@ using DG.Tweening;
 using Photon.Realtime;
 using Photon.Pun;
 using ExitGames.Client.Photon;
+using TMPro;
 
 public class BoardManager : MonoBehaviour, IOnEventCallback
 {
@@ -31,6 +32,10 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     [Range(0.0f, 10f)]
     public float delay = 0.05f;
 
+    int elapsedTime = 0;
+
+    [SerializeField] TextMeshProUGUI timerText;
+
     private void Awake()
     {
         InputManager.Instance.OnTouchReceived += ButtonPressed;
@@ -53,6 +58,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private void OnGameStart()
     {
+        elapsedTime = 0;
         ScoreTracker.Instance.Score = 0;
 
         for (int i = 0; i < onedimTiles.Count; i++)
@@ -462,6 +468,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         {
             Shuffle();
         }
+
+        UpdateTime();
     }
 
     void RaiseTileCreatedEvent(int tileVlaue)
@@ -480,6 +488,24 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
                 Debug.LogErrorFormat("Tile Created Event Received. Sender {0} Tile Value {1}", photonEvent.Sender, tileValue);
                 break;
         }
+    }
+
+    void UpdateTime()
+    {
+        int timeSinceStart = (int) (PhotonNetwork.Time - ConnectionManager.GameStartTime);
+        if(timeSinceStart != elapsedTime)
+        {
+            elapsedTime = timeSinceStart;
+            UpdateTimerText(elapsedTime);
+        }
+    }
+
+    void UpdateTimerText(int seconds)
+    {
+        int minutes = seconds / 60;
+        seconds %= 60;
+
+        timerText.text = string.Format("{0:D2}:{1:D2}", minutes, seconds);
     }
 }
 public enum GameState

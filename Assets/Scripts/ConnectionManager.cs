@@ -5,6 +5,8 @@ using Photon.Realtime;
 using Photon.Pun;
 public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallbacks,IMatchmakingCallbacks
 {
+    const string KEY_GAME_START_TIME = "gst";
+    public static double GameStartTime;
     void Start()
     {
         if (PhotonNetwork.IsConnectedAndReady)
@@ -117,6 +119,15 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
             return;
         }
 
+        GameStartTime = PhotonNetwork.Time;
+        Debug.LogFormat("ConnectionManager :: LoadGameScene :: {0}", GameStartTime);
+
+        ExitGames.Client.Photon.Hashtable hashtable = PhotonNetwork.CurrentRoom.CustomProperties;
+        hashtable.Add(KEY_GAME_START_TIME, GameStartTime);
+
+        PhotonNetwork.CurrentRoom.SetCustomProperties(hashtable);
+        PhotonNetwork.SendAllOutgoingCommands();
+
         PhotonNetwork.LoadLevel("Game");
     }
 
@@ -140,6 +151,16 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         {
             //TODO: Show win screen/ some UI to denote as last player in room
             LeaveRoom();
+        }
+    }
+
+    public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
+    {
+        Debug.LogFormat("ConnectionManager :: OnRoomPropertiesUpdate");
+        if (propertiesThatChanged.ContainsKey(KEY_GAME_START_TIME))
+        {
+            GameStartTime = (double)propertiesThatChanged[KEY_GAME_START_TIME];
+            Debug.LogFormat("ConnectionManager :: OnRoomPropertiesUpdate :: {0}", GameStartTime);
         }
     }
 }
