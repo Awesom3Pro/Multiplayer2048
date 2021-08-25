@@ -7,4 +7,8 @@ public static class Constants
     public const byte TileCreatedEventCode = 1;
 
     public const byte OnGameStartEventCode = 0;
+
+    public const byte OnGameOverCode = 10;
+
+    public const byte OnOpponentTileMergeCode = 11;
 }

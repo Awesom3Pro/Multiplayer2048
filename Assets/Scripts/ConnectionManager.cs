@@ -7,7 +7,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
 {
     const string KEY_GAME_START_TIME = "gst";
     public static double GameStartTime;
-    void Start()
+   public void OnButtonClick()
     {
         if (PhotonNetwork.IsConnectedAndReady)
         {

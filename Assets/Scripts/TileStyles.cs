@@ -6,11 +6,12 @@ using UnityEngine;
 public class TileFormat
 {
     public int number;
-    public Sprite faceSprite;
-
+    public Color faceColor;
+    public Color numberColor;
     TileFormat()
     {
-
+        faceColor = new Color(1, 1, 1, 1);
+        numberColor = new Color(1, 1, 1, 1);
     }
 }
 public class TileStyles : MonoBehaviour

@@ -10,9 +10,12 @@ using ExitGames.Client.Photon;
 using TMPro;
 using Newtonsoft.Json;
 
-public class BoardManager : MonoBehaviour
+public class BoardManager : MonoBehaviour, IOnEventCallback
 {
+    [Header("References")]
     public List<Tile> onedimTiles = new List<Tile>();
+
+    public GameOverPanel gameOverPanel;
 
     private List<Tile> emptyTiles = new List<Tile>();
 
@@ -29,13 +32,14 @@ public class BoardManager : MonoBehaviour
     private bool[] animationComplete = new bool[4] { true, true, true, true };
 
     const byte TileCreatedEventCode = 1;
-    
+
     [Range(0.0f, 10f)]
     public float delay = 0.05f;
 
     int elapsedTime = 0;
 
     [SerializeField] TextMeshProUGUI timerText;
+
 
     private void Awake()
     {
@@ -318,7 +322,7 @@ public class BoardManager : MonoBehaviour
 
                 if (flag)
                 {
-                   
+
                     UpdateEmptyTiles();
                     Generate();
 
@@ -335,7 +339,7 @@ public class BoardManager : MonoBehaviour
     {
         animationComplete[index] = false;
 
-        while(MakeOneMoveUp(tiles))
+        while (MakeOneMoveUp(tiles))
         {
             flag = true;
 
@@ -418,6 +422,10 @@ public class BoardManager : MonoBehaviour
         if (!CanMove())
         {
             state = GameState.GameOver;
+
+            RaiseGameOver();
+
+            OnGameOver(0);
         }
         else
         {
@@ -494,7 +502,7 @@ public class BoardManager : MonoBehaviour
 
     private void Update()
     {
-        if(Input.GetKeyDown(KeyCode.A))
+        if (Input.GetKeyDown(KeyCode.A))
         {
             Shuffle();
         }
@@ -517,10 +525,29 @@ public class BoardManager : MonoBehaviour
         return PhotonNetwork.RaiseEvent(Constants.OnGameStartEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
     }
 
+    bool RaiseGameOver()
+    {
+        object x = (int)1;
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+        return PhotonNetwork.RaiseEvent(Constants.OnGameOverCode, x, raiseEventOptions, SendOptions.SendReliable);
+    }
+
+    private void OnGameOver(int num)
+    {
+        if(num == 1)
+        {
+            gameOverPanel.ShowGameOverText("You Won");
+        }
+        else
+        {
+            gameOverPanel.ShowGameOverText("Opponent Wins");
+        }
+    }
+
     void UpdateTime()
     {
-        int timeSinceStart = (int) (PhotonNetwork.Time - ConnectionManager.GameStartTime);
-        if(timeSinceStart != elapsedTime)
+        int timeSinceStart = (int)(PhotonNetwork.Time - ConnectionManager.GameStartTime);
+        if (timeSinceStart != elapsedTime)
         {
             elapsedTime = timeSinceStart;
             UpdateTimerText(elapsedTime);
@@ -533,6 +560,25 @@ public class BoardManager : MonoBehaviour
         seconds %= 60;
 
         timerText.text = string.Format("{0:D2}:{1:D2}", minutes, seconds);
+    }
+
+    public void OnEvent(EventData photonEvent)
+    {
+
+        switch (photonEvent.Code)
+        {
+            case Constants.OnGameOverCode:
+                Debug.LogError("Getting Move Command");
+                int tileValue = (int)photonEvent.CustomData;
+
+                break;
+            case Constants.OnOpponentTileMergeCode:
+                Debug.LogError("Opponent Game Initiated");
+                int x = ((int)photonEvent.CustomData);
+                OnGameOver(x);
+                break;
+
+        }
     }
 }
 

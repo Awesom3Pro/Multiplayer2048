@@ -38,7 +38,9 @@ public class Tile : MonoBehaviour
     public bool IsMerged { get; set; }
 
     public SpriteRenderer spriteRenderer;
+    public TMP_Text numberText;
     public Transform tileTransform;
+
 
     private void Awake()
     {
@@ -47,7 +49,9 @@ public class Tile : MonoBehaviour
 
     private void ApplyStyleIndex(int index)
     {
-        spriteRenderer.sprite = TileStyles.Instance.tileFormats[index].faceSprite;
+        spriteRenderer.color = TileStyles.Instance.tileFormats[index].faceColor;
+        numberText.text = TileStyles.Instance.tileFormats[index].number.ToString();
+        numberText.color = TileStyles.Instance.tileFormats[index].numberColor;
     }
 
     public void ApplyStyle(int num)
@@ -101,5 +105,6 @@ public class Tile : MonoBehaviour
         spriteRenderer.enabled = isVisible;
         spriteRenderer.DOKill(true);
         spriteRenderer.DOFade(isVisible ? 1 : 0, 0.1f);
+        numberText.DOFade(isVisible ? 1 : 0, 0.1f);
     }
 }

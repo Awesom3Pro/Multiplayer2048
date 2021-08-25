@@ -40,11 +40,8 @@ public class ScoreTracker : MonoBehaviour
             if (highscore < score)
             {
                 highscore = score;
-                // Update Text
-                //Save
             }
             scoreLabel.text = score.ToString();
-            Debug.Log(score);
         }
     }
 
