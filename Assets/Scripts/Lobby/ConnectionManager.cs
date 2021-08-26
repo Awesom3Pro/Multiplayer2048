@@ -48,7 +48,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
 
     public void LoadSinglePlayer()
     {
-        PlayerPrefs.SetInt("MODE : ", 0); // Set Game  Single Player
+        PlayerPrefs.SetInt("MODE", 0); // Set Game  Single Player
 
         SceneManager.LoadScene("Game");
     }
@@ -74,7 +74,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
             }
         }
 
-        PlayerPrefs.SetInt("MODE : ", 1); // Set Game Multiplayer
+        PlayerPrefs.SetInt("MODE", 1); // Set Game Multiplayer
     }
 
     public override void OnConnected()

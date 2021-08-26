@@ -45,7 +45,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private void Awake()
     {
-        if(PlayerPrefs.GetInt("MODE")==0)
+        if (PlayerPrefs.GetInt("MODE") == 0)
         {
             isSinglePlayer = true;
         }
