@@ -2205,6 +2205,7 @@ MonoBehaviour:
   - {fileID: 326279001}
   - {fileID: 854412429}
   delay: 0.05
+  opponentBoard: {fileID: 1803508065}
 --- !u!4 &1130348158
 Transform:
   m_ObjectHideFlags: 0

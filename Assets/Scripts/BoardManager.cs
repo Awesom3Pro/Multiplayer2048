@@ -29,6 +29,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private bool flag = false;
 
+    private bool isSinglePlayer;
+
     private bool[] animationComplete = new bool[4] { true, true, true, true };
 
     const byte TileCreatedEventCode = 1;
@@ -43,6 +45,10 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private void Awake()
     {
+        if(PlayerPrefs.GetInt("MODE")==0)
+        {
+            isSinglePlayer = true;
+        }
         InputManager.Instance.OnTouchReceived += ButtonPressed;
     }
 
@@ -53,11 +59,13 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     void OnEnable()
     {
+        if(!isSinglePlayer)
         PhotonNetwork.AddCallbackTarget(this);
     }
 
     void OnDisable()
     {
+        if(!isSinglePlayer)
         PhotonNetwork.RemoveCallbackTarget(this);
     }
 
@@ -512,24 +520,38 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     bool RaiseTileCreatedEvent(MessageStruc tileStruc)
     {
-        object struc = JsonConvert.SerializeObject(tileStruc);
-        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
-        return PhotonNetwork.RaiseEvent(TileCreatedEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
+        if (!isSinglePlayer)
+        {
+            object struc = JsonConvert.SerializeObject(tileStruc);
+            RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+            return PhotonNetwork.RaiseEvent(TileCreatedEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
+        }
+
+        return false;
     }
 
     bool RaiseOnGameStartedEvent(GameStartStruc gameStruc)
     {
-        Debug.LogError("Raised Game Started Event");
-        object struc = JsonConvert.SerializeObject(gameStruc);
-        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
-        return PhotonNetwork.RaiseEvent(Constants.OnGameStartEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
+        if (!isSinglePlayer)
+        {
+            Debug.LogError("Raised Game Started Event");
+            object struc = JsonConvert.SerializeObject(gameStruc);
+            RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+            return PhotonNetwork.RaiseEvent(Constants.OnGameStartEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
+        }
+        return false;
     }
 
     bool RaiseGameOver()
     {
-        object x = (int)1;
-        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
-        return PhotonNetwork.RaiseEvent(Constants.OnGameOverCode, x, raiseEventOptions, SendOptions.SendReliable);
+        if (!isSinglePlayer)
+        {
+            object x = (int)1;
+            RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+            return PhotonNetwork.RaiseEvent(Constants.OnGameOverCode, x, raiseEventOptions, SendOptions.SendReliable);
+        }
+
+        return false;
     }
 
     private void OnGameOver(int num)

@@ -9,7 +9,7 @@ using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
+public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
 {
     public List<Tile> onedimTiles = new List<Tile>();
 
@@ -25,11 +25,26 @@ public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
 
     private bool[] animationComplete = new bool[4] { true, true, true, true };
 
+    private GameState state;
+
     [Range(0.0f, 10f)]
     public float delay = 0.05f;
 
+    private List<MessageStruc> queueMoves = new List<MessageStruc>();
+
+    public GameObject opponentBoard;
+
+    private bool isSinglePlayer;
+
     void OnEnable()
     {
+        if (PlayerPrefs.GetInt("MODE") == 0)
+        {
+            isSinglePlayer = true;
+
+            opponentBoard.gameObject.SetActive(false);
+        }
+
         PhotonNetwork.AddCallbackTarget(this);
     }
 
@@ -38,7 +53,7 @@ public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
         PhotonNetwork.RemoveCallbackTarget(this);
     }
 
-    private void OnGameStart(int [] tileIndexes,int[] tileValue)
+    private void OnGameStart(int[] tileIndexes, int[] tileValue)
     {
         OpponentScoreTracker.Instance.Score = 0;
 
@@ -75,6 +90,8 @@ public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
 
         Generate(tileValue[0], tileIndexes[0]);
         Generate(tileValue[1], tileIndexes[1]);
+
+        state = GameState.Playing;
     }
 
     public void Reset()
@@ -326,6 +343,8 @@ public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
 
     private IEnumerator MoveCoroutine(Direction dir, int tileIndex, int tileValue)
     {
+        state = GameState.Waiting;
+
         switch (dir)
         {
             case Direction.DOWN:
@@ -364,6 +383,14 @@ public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
             UpdateEmptyTiles();
 
             Generate(tileValue, tileIndex);
+        }
+
+        queueMoves.RemoveAt(0);
+
+        if (CanMove())
+        {
+            PlayQueue();
+            state = GameState.Playing;
         }
     }
 
@@ -438,14 +465,26 @@ public class OpponentBoardManager : MonoBehaviour,IOnEventCallback
             case Constants.TileCreatedEventCode:
                 Debug.LogError("Getting Move Command");
                 MessageStruc tileValue = JsonConvert.DeserializeObject<MessageStruc>((string)photonEvent.CustomData);
-                ButtonPressed(tileValue.lastDirection, tileValue.lastStruc.TileIndex, tileValue.lastStruc.TileNumber);
-           break;
+                queueMoves.Add(tileValue);
+                PlayQueue();
+                break;
             case Constants.OnGameStartEventCode:
                 Debug.LogError("Opponent Game Initiated");
                 GameStartStruc startValues = JsonConvert.DeserializeObject<GameStartStruc>((string)photonEvent.CustomData);
                 OnGameStart(startValues.tileIndex, startValues.tileValues);
-                break; 
+                break;
 
+        }
+    }
+
+    private void PlayQueue()
+    {
+        if (state == GameState.Playing)
+        {
+            if (queueMoves.Count > 0)
+            {
+                ButtonPressed(queueMoves[0].lastDirection, queueMoves[0].lastStruc.TileIndex, queueMoves[0].lastStruc.TileNumber);
+            }
         }
     }
 }

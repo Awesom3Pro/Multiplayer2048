@@ -3,21 +3,67 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Realtime;
 using Photon.Pun;
+using UnityEngine.SceneManagement;
+using System;
+
 public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallbacks,IMatchmakingCallbacks
 {
+    private static ConnectionManager instance;
+
+    public static ConnectionManager Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindObjectOfType<ConnectionManager>();
+            }
+
+            return instance;
+
+        }
+    }
     const string KEY_GAME_START_TIME = "gst";
     public static double GameStartTime;
-   public void OnButtonClick()
+
+    public event Action OnSingleButtonClicked;
+    public event Action OnMultiplayerButtonClicked;
+    public event Action OnConnectionReadyInvoked;
+    public event Action OnCreatedRoomInvoked;
+    public event Action OnRoomJoinedInvoked;
+    public event Action OnLeftRoomInvoked;
+    public event Action OnConnectedInvoked;
+    public event Action OnConnectedToMasterInvoked;
+    public event Action OnGameToLoad;
+
+    public void StartSinglePlayerMode()
+    {
+        OnSingleButtonClicked?.Invoke();
+    }
+
+    public void StartRandomPlayerMode()
+    {
+        OnMultiplayerButtonClicked?.Invoke();
+    }
+
+    public void LoadSinglePlayer()
+    {
+        PlayerPrefs.SetInt("MODE : ", 0); // Set Game  Single Player
+
+        SceneManager.LoadScene("Game");
+    }
+    public void OnButtonClick()
     {
         if (PhotonNetwork.IsConnectedAndReady)
         {
+            OnConnectionReadyInvoked?.Invoke();
             Debug.Log("ConnectionManager :: Start :: IsConnectedAndReady : True");
             PhotonNetwork.JoinRandomRoom();
         }
         else
         {
             Debug.Log("ConnectionManager :: Start :: IsConnectedAndReady : False");
-            if(PhotonNetwork.ConnectUsingSettings())
+            if (PhotonNetwork.ConnectUsingSettings())
             {
                 Debug.Log("ConnectionManager :: Start :: ConnectUsingSettings : True");
             }
@@ -27,10 +73,13 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
                 //TODO: Handle this case
             }
         }
+
+        PlayerPrefs.SetInt("MODE : ", 1); // Set Game Multiplayer
     }
 
     public override void OnConnected()
     {
+        OnConnectedInvoked?.Invoke();
         Debug.Log("ConnectionManager :: OnConnected");
     }
 
@@ -39,11 +88,13 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         Debug.Log("ConnectionManager :: OnConnectedToMaster");
         PhotonNetwork.AutomaticallySyncScene = true;
         PhotonNetwork.JoinRandomRoom();
+        OnConnectedToMasterInvoked?.Invoke();
     }
 
     public override void OnCreatedRoom()
     {
         Debug.Log("ConnectionManager :: OnCreatedRoom");
+        OnCreatedRoomInvoked?.Invoke();
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)
@@ -73,6 +124,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
 
     public override void OnJoinedRoom()
     {
+        OnRoomJoinedInvoked?.Invoke();
         Debug.Log("ConnectionManager :: OnJoinedRoom :: " + PhotonNetwork.CurrentRoom.Name);
     }
 
@@ -113,6 +165,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
 
     void LoadGameScene()
     {
+        OnGameToLoad?.Invoke();
         if(!PhotonNetwork.IsMasterClient)
         {
             Debug.Log("ConnectionManager :: LoadGameScene :: Not MasterClient. Returning from LoadGame method.");
