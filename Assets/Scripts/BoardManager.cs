@@ -411,8 +411,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
                 break;
         }
 
-        if(!isSinglePlayer)
-        IsLoadingComplete = false;
+        
 
         while (!(IsAnimationCompleted()))
         {
@@ -426,6 +425,9 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         if (flag)
         {
             UpdateEmptyTiles();
+
+            if(!isSinglePlayer)
+            IsLoadingComplete = false;
 
             GenerateTileStruc tileStruc = Generate();
 
