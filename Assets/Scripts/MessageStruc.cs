@@ -5,6 +5,7 @@ public class MessageStruc
 {
     public GenerateTileStruc lastStruc;
     public Direction lastDirection;
+    public int moveIndex;
 }
 
 [System.Serializable]

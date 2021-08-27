@@ -15,7 +15,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     [Header("References")]
     public List<Tile> onedimTiles = new List<Tile>();
 
-    public GameOverPanel gameOverPanel;
+    public LoadingBoard loader;
 
     private List<Tile> emptyTiles = new List<Tile>();
 
@@ -29,7 +29,9 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private bool flag = false;
 
-    private bool isSinglePlayer;
+    public bool isSinglePlayer;
+
+    public bool IsLoadingComplete;
 
     private bool[] animationComplete = new bool[4] { true, true, true, true };
 
@@ -40,20 +42,23 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     int elapsedTime = 0;
 
+    private int moveIndex;
+
     [SerializeField] TextMeshProUGUI timerText;
 
-
     private void Awake()
+    {
+       
+    }
+
+    private void Start()
     {
         if (PlayerPrefs.GetInt("MODE") == 0)
         {
             isSinglePlayer = true;
         }
         InputManager.Instance.OnTouchReceived += ButtonPressed;
-    }
 
-    private void Start()
-    {
         OnGameStart();
     }
 
@@ -72,6 +77,9 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     private void OnGameStart()
     {
         elapsedTime = 0;
+
+        moveIndex = 0;
+
         ScoreTracker.Instance.Score = 0;
 
         for (int i = 0; i < onedimTiles.Count; i++)
@@ -117,7 +125,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         struc.tileIndex = tileIndexes;
         struc.tileValues = tileValues;
         RaiseOnGameStartedEvent(struc);
-
+        IsLoadingComplete = true;
         state = GameState.Playing;
     }
 
@@ -284,7 +292,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     }
     private void ButtonPressed(Direction direction)
     {
-        if (state == GameState.Playing)
+        if (state == GameState.Playing && IsLoadingComplete)
         {
             ResetTileMoves();
 
@@ -403,6 +411,9 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
                 break;
         }
 
+        if(!isSinglePlayer)
+        IsLoadingComplete = false;
+
         while (!(IsAnimationCompleted()))
         {
             yield return null;
@@ -420,24 +431,53 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
             struc.lastStruc = tileStruc;
 
+            struc.moveIndex = moveIndex;
+
             if (!RaiseTileCreatedEvent(struc))
             {
                 Debug.LogError("Event couldn't be sent");
             }
         }
 
-
-        if (!CanMove())
+        if (!isSinglePlayer)
         {
-            state = GameState.GameOver;
+            loader.OnLoadStart();
 
-            RaiseGameOver();
+            while (!IsLoadingComplete)
+            {
+                yield return null;
+            }
 
-            OnGameOver(0);
+            loader.OnLoadQuit(() =>
+            {
+
+                if (!CanMove())
+                {
+                    state = GameState.GameOver;
+
+                    OnGameOver(0);
+                }
+                else
+                {
+                    state = GameState.Playing;
+                }
+
+            });
         }
         else
         {
-            state = GameState.Playing;
+            if (!CanMove())
+            {
+                state = GameState.GameOver;
+
+                RaiseGameOver();
+
+                OnGameOver(0);
+            }
+            else
+            {
+                state = GameState.Playing;
+            }
         }
     }
 
@@ -556,13 +596,14 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private void OnGameOver(int num)
     {
-        if(num == 1)
+        if (num == 1)
         {
-            gameOverPanel.ShowGameOverText("You Won");
+            Debug.LogError("You won");
         }
         else
         {
-            gameOverPanel.ShowGameOverText("Opponent Wins");
+            RaiseGameOver();
+            Debug.LogError("Opponent Wins");
         }
     }
 
@@ -598,6 +639,10 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
                 Debug.LogError("Opponent Game Initiated");
                 int x = ((int)photonEvent.CustomData);
                 OnGameOver(x);
+                break;
+            case Constants.OnTileCreatedEventReceivedCode:
+                Debug.LogError("Received handshake from Opponent");
+                IsLoadingComplete = true;
                 break;
 
         }

@@ -466,6 +466,7 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
                 Debug.LogError("Getting Move Command");
                 MessageStruc tileValue = JsonConvert.DeserializeObject<MessageStruc>((string)photonEvent.CustomData);
                 queueMoves.Add(tileValue);
+                OnRaiseEventHandshake(true);
                 PlayQueue();
                 break;
             case Constants.OnGameStartEventCode:
@@ -475,6 +476,13 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
                 break;
 
         }
+    }
+
+    private bool OnRaiseEventHandshake(bool handshake)
+    {
+        object x = handshake;
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+        return PhotonNetwork.RaiseEvent(Constants.OnTileCreatedEventReceivedCode, x, raiseEventOptions, SendOptions.SendReliable);
     }
 
     private void PlayQueue()

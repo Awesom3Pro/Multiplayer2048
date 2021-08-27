@@ -11,4 +11,6 @@ public static class Constants
     public const byte OnGameOverCode = 10;
 
     public const byte OnOpponentTileMergeCode = 11;
+
+    public const byte OnTileCreatedEventReceivedCode = 100;
 }
