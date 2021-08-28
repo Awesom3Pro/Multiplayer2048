@@ -49,6 +49,10 @@ public class LoadingUI : MonoBehaviour
         ConnectionManager.Instance.OnRoomJoinedInvoked -= JoinedRoom;
         ConnectionManager.Instance.OnGameToLoad += Gameloading;
         loadImage.DOFillAmount(0.35f, 0.1f);
+        //DOVirtual.DelayedCall(0.1f, () =>
+        //{
+        //    loadImage.DOFillAmount(0.9f, ConnectionManager.Instance.roomWaitTimeOut);
+        //});
     }
 
     private void Gameloading()

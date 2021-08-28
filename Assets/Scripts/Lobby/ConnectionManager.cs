@@ -14,13 +14,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     {
         get
         {
-            if (instance == null)
-            {
-                instance = FindObjectOfType<ConnectionManager>();
-            }
-
             return instance;
-
         }
     }
     const string KEY_GAME_START_TIME = "gst";
@@ -35,6 +29,27 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     public event Action OnConnectedInvoked;
     public event Action OnConnectedToMasterInvoked;
     public event Action OnGameToLoad;
+
+    readonly float joinRandomTImeOut = 2f;
+    float joinRandomRoomTimestamp;
+
+    float roomJoinedTimestamp;
+    public readonly float roomWaitTimeOut = 20f;
+
+    Coroutine exitRoomCoroutine;
+
+    private void Awake()
+    {
+        if(instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else if(instance != this)
+        {
+            Destroy(gameObject);
+        }
+    }
 
     public void StartSinglePlayerMode()
     {
@@ -58,6 +73,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         {
             OnConnectionReadyInvoked?.Invoke();
             Debug.Log("ConnectionManager :: Start :: IsConnectedAndReady : True");
+            joinRandomRoomTimestamp = Time.realtimeSinceStartup;
             PhotonNetwork.JoinRandomRoom();
         }
         else
@@ -87,6 +103,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     {
         Debug.Log("ConnectionManager :: OnConnectedToMaster");
         PhotonNetwork.AutomaticallySyncScene = true;
+        joinRandomRoomTimestamp = Time.realtimeSinceStartup;
         PhotonNetwork.JoinRandomRoom();
         OnConnectedToMasterInvoked?.Invoke();
     }
@@ -125,12 +142,32 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     public override void OnJoinedRoom()
     {
         OnRoomJoinedInvoked?.Invoke();
+
         Debug.Log("ConnectionManager :: OnJoinedRoom :: " + PhotonNetwork.CurrentRoom.Name);
+        if(PhotonNetwork.IsMasterClient)
+        {
+            roomJoinedTimestamp = Time.realtimeSinceStartup;
+            exitRoomCoroutine = StartCoroutine(ExitRoomAndGoToLooby(roomWaitTimeOut));
+        }
+    }
+
+    IEnumerator ExitRoomAndGoToLooby(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+
+        Debug.Log("ConnectionManager :: ExitRoomAndGoToLooby");
+        LeaveRoom();
     }
 
     public override void OnJoinRandomFailed(short returnCode, string message)
     {
         Debug.Log("ConnectionManager :: OnJoinRandomFailed");
+
+        if(Time.realtimeSinceStartup - joinRandomRoomTimestamp < joinRandomTImeOut)
+        {
+            PhotonNetwork.JoinRandomRoom();
+            return;
+        }
 
         Debug.Log("Creating Room");
         CreateRoom();
@@ -161,6 +198,8 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     {
         Debug.Log("ConnectionManager :: LeaveRoom");
         PhotonNetwork.LeaveRoom();
+        PhotonNetwork.Disconnect();
+        SceneManager.LoadScene("Lobby");
     }
 
     void LoadGameScene()
@@ -188,9 +227,15 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     {
         Debug.LogFormat("ConnectionManager :: OnPlayerEnteredRoom :: {0} entered room", newPlayer.NickName);
 
+        if(newPlayer != PhotonNetwork.MasterClient && exitRoomCoroutine != null)
+        {
+            StopCoroutine(exitRoomCoroutine);
+        }
+
         Room room = PhotonNetwork.CurrentRoom;
         if (room.PlayerCount == room.MaxPlayers)
         {
+            PhotonNetwork.CurrentRoom.IsOpen = false;
             LoadGameScene();
         }
     }
