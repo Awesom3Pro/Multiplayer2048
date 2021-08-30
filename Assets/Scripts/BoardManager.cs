@@ -706,24 +706,24 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private IEnumerator OnReceivedHealthUpdate(float dmg, Action action)
     {
-        IsLoadingComplete = false;
-
-        RaiseAttackEvent(dmg);
-
-        loader.OnLoadStart();
-
         if (!isSinglePlayer)
         {
+            IsLoadingComplete = false;
+
+            RaiseAttackEvent(dmg);
+
+            loader.OnLoadStart();
+
             while (!IsLoadingComplete)
             {
                 yield return null;
             }
-        }
 
-        loader.OnLoadQuit(() =>
-        {
-            action?.Invoke();
-        });
+            loader.OnLoadQuit(() =>
+            {
+                action?.Invoke();
+            });
+        }
     }
     #endregion
     private void OnGameOver(int num)
