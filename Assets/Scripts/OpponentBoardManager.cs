@@ -40,6 +40,8 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
 
     public Transform hpBar;
 
+    public TMPro.TMP_Text hpText;
+
     void OnEnable()
     {
         if (PlayerPrefs.GetInt("MODE") == 0)
@@ -471,6 +473,8 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
         hpBar.DOScaleX((healthPoints / 100) * 3.3f, 0.3f);
 
         hpBar.transform.localScale = new Vector3(Mathf.Clamp(hpBar.transform.localScale.x, 0, 3.3f), hpBar.transform.localScale.y, 0);
+
+        hpText.text = string.Format("Health : {0}%", healthPoints);
     }
 
     public void OnEvent(EventData photonEvent)

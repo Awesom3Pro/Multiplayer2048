@@ -27,6 +27,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     public GameState state = GameState.None;
 
+    public TMP_Text hpText;
+
     public bool IsLoadingComplete;
 
     private List<Tile> emptyTiles = new List<Tile>();
@@ -779,6 +781,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         hpBar.DOScaleX((healthPercentage / 100) * 3.3f, 0.3f);
 
         hpBar.transform.localScale = new Vector3(Mathf.Clamp(hpBar.transform.localScale.x, 0, 3.3f), hpBar.transform.localScale.y, 0);
+
+        hpText.text = string.Format("Health : {0}%", healthPercentage);
 
         RaiseHealthUpdatedEvent(healthPercentage);
 

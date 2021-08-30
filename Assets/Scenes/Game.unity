@@ -6852,6 +6852,7 @@ MonoBehaviour:
   healthPoints: 0
   opponentBoard: {fileID: 1803508065}
   hpBar: {fileID: 1250133195}
+  hpText: {fileID: 1175524366}
 --- !u!1 &1806335469
 GameObject:
   m_ObjectHideFlags: 0
@@ -7330,6 +7331,7 @@ MonoBehaviour:
   deployButtonTransform: {fileID: 1970809670}
   hpBar: {fileID: 2088096545}
   state: 0
+  hpText: {fileID: 254973349}
   IsLoadingComplete: 0
   isSinglePlayer: 0
   delay: 0.002
