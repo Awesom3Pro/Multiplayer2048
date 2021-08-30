@@ -30,11 +30,15 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
     [Range(0.0f, 10f)]
     public float delay = 0.05f;
 
+    public float healthPoints;
+
     private List<MessageStruc> queueMoves = new List<MessageStruc>();
 
     public GameObject opponentBoard;
 
     private bool isSinglePlayer;
+
+    public Transform hpBar;
 
     void OnEnable()
     {
@@ -91,6 +95,7 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
         Generate(tileValue[0], tileIndexes[0]);
         Generate(tileValue[1], tileIndexes[1]);
 
+        
         state = GameState.Playing;
     }
 
@@ -315,6 +320,7 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
 
     private IEnumerator MakeOneLineMoveUp(Tile[] tiles, int index)
     {
+        Debug.LogError(index);
         animationComplete[index] = false;
 
         while (MakeOneMoveUp(tiles))
@@ -458,6 +464,15 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
         return complete;
     }
 
+    private void UpdateHealth(float dmg)
+    {
+        healthPoints = dmg;
+
+        hpBar.DOScaleX((healthPoints / 100) * 3.3f, 0.3f);
+
+        hpBar.transform.localScale = new Vector3(Mathf.Clamp(hpBar.transform.localScale.x, 0, 3.3f), hpBar.transform.localScale.y, 0);
+    }
+
     public void OnEvent(EventData photonEvent)
     {
         switch (photonEvent.Code)
@@ -473,8 +488,11 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
                 Debug.LogError("Opponent Game Initiated");
                 GameStartStruc startValues = JsonConvert.DeserializeObject<GameStartStruc>((string)photonEvent.CustomData);
                 OnGameStart(startValues.tileIndex, startValues.tileValues);
+                OnRaiseEventHandshakeGameStart();
                 break;
-
+            case Constants.OnGotAttackedReceived:
+                UpdateHealth((float)(photonEvent.CustomData));
+                break;
         }
     }
 
@@ -483,6 +501,14 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
         object x = handshake;
         RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
         return PhotonNetwork.RaiseEvent(Constants.OnTileCreatedEventReceivedCode, x, raiseEventOptions, SendOptions.SendReliable);
+    }
+
+    private bool OnRaiseEventHandshakeGameStart()
+    {
+        bool z = true;
+        object x = z;
+        RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+        return PhotonNetwork.RaiseEvent(Constants.OnGameStartReceivedCode, x, raiseEventOptions, SendOptions.SendReliable);
     }
 
     private void PlayQueue()

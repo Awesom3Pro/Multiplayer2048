@@ -2061,6 +2061,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   loadImage: {fileID: 270851549}
+  loadingText: {fileID: 531372335}
   buttonLayout: {fileID: 1025190466}
   loadingUI: {fileID: 1861148188}
 --- !u!225 &1861148188

@@ -24,7 +24,7 @@ public class LoadingBoard : MonoBehaviour
     {
         loadingUI.SetActive(true);
 
-        sprite.rotation = Quaternion.identity;
+        sprite.rotation = new Quaternion(0, 0, 0, 0);
 
         spriteRender.DOColor(fadeInColor, 0.3f).OnComplete(() =>
         {
@@ -34,7 +34,7 @@ public class LoadingBoard : MonoBehaviour
 
     public void OnLoadQuit(Action callback)
     {
-        sprite.DOKill(true);
+        sprite.DOKill(false);
         spriteRender.DOColor(fadeOutColor, 0.2f).OnComplete(() => { callback?.Invoke();
             loadingUI.SetActive(false);
         });

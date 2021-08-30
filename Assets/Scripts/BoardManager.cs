@@ -17,6 +17,18 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     public LoadingBoard loader;
 
+    public GameObject mergeAnim;
+
+    public GameOverPopUp gameOver;
+
+    public Transform deployButtonTransform;
+
+    public Transform hpBar;
+
+    public GameState state = GameState.None;
+
+    public bool IsLoadingComplete;
+
     private List<Tile> emptyTiles = new List<Tile>();
 
     private List<Tile[]> columns = new List<Tile[]>();
@@ -25,31 +37,24 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     private Tile[,] multiTiles = new Tile[4, 4];
 
-    public GameState state = GameState.None;
-
     private bool flag = false;
 
     public bool isSinglePlayer;
 
-    public bool IsLoadingComplete;
-
     private bool[] animationComplete = new bool[4] { true, true, true, true };
-
-    const byte TileCreatedEventCode = 1;
 
     [Range(0.0f, 10f)]
     public float delay = 0.05f;
 
-    int elapsedTime = 0;
+    private int elapsedTime = 0;
+
+    private float healthPercentage;
+
+    private const float maxWidth = 3.3f;
 
     private int moveIndex;
 
     [SerializeField] TextMeshProUGUI timerText;
-
-    private void Awake()
-    {
-       
-    }
 
     private void Start()
     {
@@ -64,21 +69,24 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     void OnEnable()
     {
-        if(!isSinglePlayer)
-        PhotonNetwork.AddCallbackTarget(this);
+        if (!isSinglePlayer)
+            PhotonNetwork.AddCallbackTarget(this);
     }
 
     void OnDisable()
     {
-        if(!isSinglePlayer)
-        PhotonNetwork.RemoveCallbackTarget(this);
+        if (!isSinglePlayer)
+            PhotonNetwork.RemoveCallbackTarget(this);
     }
 
+    #region GameStart
     private void OnGameStart()
     {
         elapsedTime = 0;
 
         moveIndex = 0;
+
+        healthPercentage = 100;
 
         ScoreTracker.Instance.Score = 0;
 
@@ -124,15 +132,29 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         GameStartStruc struc = new GameStartStruc();
         struc.tileIndex = tileIndexes;
         struc.tileValues = tileValues;
-        RaiseOnGameStartedEvent(struc);
-        IsLoadingComplete = true;
-        state = GameState.Playing;
-    }
 
+        StartCoroutine(OnSendingGameStart(struc, () =>
+        {
+            IsLoadingComplete = true;
+            state = GameState.Playing;
+
+        }));
+    }
+    #endregion
     public void Reset()
     {
         SceneManager.LoadScene(0);
     }
+
+    public void Deploy()
+    {
+        if (IsLoadingComplete && ScoreTracker.Instance.IsAttackAllowed)
+        {
+            StartCoroutine(OnReceivedHealthUpdate(-25, () => { ScoreTracker.Instance.Deployed(); }));
+        }
+    }
+
+    #region Generate
     private GenerateTileStruc Generate(int z = -1, int tile = -1)
     {
         GenerateTileStruc struc = new GenerateTileStruc();
@@ -174,79 +196,6 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         return struc;
     }
 
-    private bool MakeOneMoveDown(Tile[] tiles)
-    {
-        for (int i = 0; i < tiles.Length - 1; i++)
-        {
-            if (tiles[i].Number == 0 && tiles[i + 1].Number != 0)
-            {
-                tiles[i].Number = tiles[i + 1].Number;
-
-                tiles[i + 1].Number = 0;
-
-                return true;
-            }
-
-            if (tiles[i].Number == tiles[i + 1].Number && !tiles[i].IsMerged && !tiles[i + 1].IsMerged && tiles[i].Number != 0)
-            {
-                tiles[i].Number *= 2;
-
-                tiles[i + 1].Number = 0;
-
-                tiles[i].IsMerged = true;
-
-                tiles[i].tileTransform.localScale = new Vector2(0.2f, 0.2f);
-
-                tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
-
-                ScoreTracker.Instance.Score += tiles[i].Number;
-
-                return true;
-            }
-        }
-        return false;
-    }
-    private bool MakeOneMoveUp(Tile[] tiles)
-    {
-        for (int i = tiles.Length - 1; i > 0; i--)
-        {
-            if (tiles[i].Number == 0 && tiles[i - 1].Number != 0)
-            {
-                tiles[i].Number = tiles[i - 1].Number;
-
-                tiles[i - 1].Number = 0;
-
-                return true;
-            }
-
-            if (tiles[i].Number == tiles[i - 1].Number && !tiles[i].IsMerged && !tiles[i - 1].IsMerged && tiles[i].Number != 0 && tiles[i].Number != 11)
-            {
-                tiles[i].Number *= 2;
-
-                tiles[i - 1].Number = 0;
-
-                tiles[i].IsMerged = true;
-
-                tiles[i].tileTransform.localScale = new Vector2(0.2f, 0.2f);
-
-                tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
-
-                ScoreTracker.Instance.Score += tiles[i].Number;
-
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void ResetTileMoves()
-    {
-        foreach (Tile t in onedimTiles)
-        {
-            t.IsMerged = false;
-        }
-    }
-
     private void UpdateEmptyTiles()
     {
         emptyTiles.Clear();
@@ -257,6 +206,33 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             {
                 emptyTiles.Add(onedimTiles[x]);
             }
+        }
+    }
+    #endregion
+
+    #region TilesMovement/Merge
+
+    private bool IsAnimationCompleted()
+    {
+        bool complete = true;
+
+        foreach (bool j in animationComplete)
+        {
+            if (j == false)
+            {
+                complete = j;
+                break;
+            }
+        }
+
+        return complete;
+    }
+
+    private void ResetTileMoves()
+    {
+        foreach (Tile t in onedimTiles)
+        {
+            t.IsMerged = false;
         }
     }
 
@@ -290,6 +266,82 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         }
         return false;
     }
+
+    private bool MakeOneMoveDown(Tile[] tiles)
+    {
+        for (int i = 0; i < tiles.Length - 1; i++)
+        {
+            if (tiles[i].Number == 0 && tiles[i + 1].Number != 0)
+            {
+                tiles[i].Number = tiles[i + 1].Number;
+
+                tiles[i + 1].Number = 0;
+
+                return true;
+            }
+
+            if (tiles[i].Number == tiles[i + 1].Number && !tiles[i].IsMerged && !tiles[i + 1].IsMerged && tiles[i].Number != 0)
+            {
+                tiles[i].Number *= 2;
+
+                tiles[i + 1].Number = 0;
+
+                tiles[i].IsMerged = true;
+
+                tiles[i].tileTransform.localScale = new Vector2(0.2f, 0.2f);
+
+                tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
+
+
+                ShowMergeAnimation(tiles[i].tileTransform, deployButtonTransform);
+
+
+                ScoreTracker.Instance.Score += tiles[i].Number;
+                ScoreTracker.Instance.AttackRefill += tiles[i].Number;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool MakeOneMoveUp(Tile[] tiles)
+    {
+        for (int i = tiles.Length - 1; i > 0; i--)
+        {
+            if (tiles[i].Number == 0 && tiles[i - 1].Number != 0)
+            {
+                tiles[i].Number = tiles[i - 1].Number;
+
+                tiles[i - 1].Number = 0;
+
+                return true;
+            }
+
+            if (tiles[i].Number == tiles[i - 1].Number && !tiles[i].IsMerged && !tiles[i - 1].IsMerged && tiles[i].Number != 0 && tiles[i].Number != 11)
+            {
+                tiles[i].Number *= 2;
+
+                tiles[i - 1].Number = 0;
+
+                tiles[i].IsMerged = true;
+
+                tiles[i].tileTransform.localScale = new Vector2(0.2f, 0.2f);
+
+                tiles[i].tileTransform.DOScale(new Vector2(1, 1), 0.25f);
+
+                ShowMergeAnimation(tiles[i].tileTransform, deployButtonTransform);
+
+                ScoreTracker.Instance.Score += tiles[i].Number;
+                ScoreTracker.Instance.AttackRefill += tiles[i].Number;
+
+                return true;
+            }
+        }
+        return false;
+    }
+    #endregion
+
+    #region InputCalculation
     private void ButtonPressed(Direction direction)
     {
         if (state == GameState.Playing && IsLoadingComplete)
@@ -350,7 +402,9 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             }
         }
     }
+    #endregion
 
+    #region Move Coroutines
     private IEnumerator MakeOneLineMoveUp(Tile[] tiles, int index)
     {
         animationComplete[index] = false;
@@ -411,7 +465,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
                 break;
         }
 
-        
+
 
         while (!(IsAnimationCompleted()))
         {
@@ -426,8 +480,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         {
             UpdateEmptyTiles();
 
-            if(!isSinglePlayer)
-            IsLoadingComplete = false;
+            if (!isSinglePlayer)
+                IsLoadingComplete = false;
 
             GenerateTileStruc tileStruc = Generate();
 
@@ -483,6 +537,9 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         }
     }
 
+    #endregion
+
+    #region R&D
     public void Shuffle()
     {
         StartCoroutine(ShuffleCoroutine());
@@ -533,40 +590,16 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         }
         state = GameState.Playing;
     }
+    #endregion
 
-    private bool IsAnimationCompleted()
-    {
-        bool complete = true;
-
-        foreach (bool j in animationComplete)
-        {
-            if (j == false)
-            {
-                complete = j;
-                break;
-            }
-        }
-
-        return complete;
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            Shuffle();
-        }
-
-        UpdateTime();
-    }
-
+    #region Photon
     bool RaiseTileCreatedEvent(MessageStruc tileStruc)
     {
         if (!isSinglePlayer)
         {
             object struc = JsonConvert.SerializeObject(tileStruc);
             RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
-            return PhotonNetwork.RaiseEvent(TileCreatedEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
+            return PhotonNetwork.RaiseEvent(Constants.TileCreatedEventCode, struc, raiseEventOptions, SendOptions.SendReliable);
         }
 
         return false;
@@ -596,6 +629,101 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         return false;
     }
 
+    private bool RaiseAttackEvent(float damageToDeal)
+    {
+        if (!isSinglePlayer)
+        {
+            object x = (float)damageToDeal;
+            RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+            return PhotonNetwork.RaiseEvent(Constants.OnGotAttacked, x, raiseEventOptions, SendOptions.SendReliable);
+        }
+        return false;
+    }
+
+    private bool RaiseHealthUpdatedEvent(float hp)
+    {
+        if (!isSinglePlayer)
+        {
+            object x = (float)hp;
+            RaiseEventOptions raiseEventOptions = new RaiseEventOptions() { Receivers = ReceiverGroup.Others };
+            return PhotonNetwork.RaiseEvent(Constants.OnGotAttackedReceived, x, raiseEventOptions, SendOptions.SendReliable);
+        }
+        return false;
+    }
+
+    public void OnEvent(EventData photonEvent)
+    {
+        switch (photonEvent.Code)
+        {
+            case Constants.OnGameOverCode:
+                Debug.LogError("Getting Move Command");
+                int tileValue = (int)photonEvent.CustomData;
+                OnGameOver(tileValue);
+                break;
+            case Constants.OnGotAttacked:
+                Debug.LogError("Opponent Game Initiated");
+                float x = ((float)photonEvent.CustomData);
+                UpdateHealth(x);
+                break;
+            case Constants.OnTileCreatedEventReceivedCode:
+                Debug.LogError("Received handshake from Opponent");
+                IsLoadingComplete = true;
+                break;
+            case Constants.OnGameStartReceivedCode:
+                Debug.LogError("Received Game Started in Opponent");
+                IsLoadingComplete = true;
+                break;
+            case Constants.OnGotAttackedReceived:
+                Debug.LogError("Received");
+                IsLoadingComplete = true;
+                break;
+        }
+    }
+
+    private IEnumerator OnSendingGameStart(GameStartStruc structure, Action action)
+    {
+        IsLoadingComplete = false;
+
+        RaiseOnGameStartedEvent(structure);
+
+        loader.OnLoadStart();
+
+        if (!isSinglePlayer)
+        {
+            while (!IsLoadingComplete)
+            {
+                yield return null;
+            }
+        }
+
+        loader.OnLoadQuit(() =>
+        {
+            action?.Invoke();
+        });
+    }
+
+    private IEnumerator OnReceivedHealthUpdate(float dmg, Action action)
+    {
+        IsLoadingComplete = false;
+
+        RaiseAttackEvent(dmg);
+
+        loader.OnLoadStart();
+
+        if (!isSinglePlayer)
+        {
+            while (!IsLoadingComplete)
+            {
+                yield return null;
+            }
+        }
+
+        loader.OnLoadQuit(() =>
+        {
+            action?.Invoke();
+        });
+    }
+    #endregion
     private void OnGameOver(int num)
     {
         if (num == 1)
@@ -607,6 +735,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             RaiseGameOver();
             Debug.LogError("Opponent Wins");
         }
+
+        gameOver.ShowGameOverPopup(num == 1);
     }
 
     void UpdateTime()
@@ -627,26 +757,34 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         timerText.text = string.Format("{0:D2}:{1:D2}", minutes, seconds);
     }
 
-    public void OnEvent(EventData photonEvent)
+    private void ShowMergeAnimation(Transform intialT, Transform destinationT)
     {
+        GameObject x = Instantiate(mergeAnim);
+        x.transform.position = intialT.position;
+        SpriteRenderer z = x.GetComponent<SpriteRenderer>();
+        //z.DOColor(new Color(1, 1, 1, 0), 0.25f);
+        x.transform.DOMove(destinationT.position, 0.25f).OnComplete(() =>
+      {
+          ScoreTracker.Instance.UpdateFillBar();
+          Destroy(x);
+      });
+    }
 
-        switch (photonEvent.Code)
+    private void UpdateHealth(float healthValueDeduction)
+    {
+        healthPercentage = healthPercentage + healthValueDeduction;
+
+        hpBar.DOKill(true);
+
+        hpBar.DOScaleX((healthPercentage / 100) * 3.3f, 0.3f);
+
+        hpBar.transform.localScale = new Vector3(Mathf.Clamp(hpBar.transform.localScale.x, 0, 3.3f), hpBar.transform.localScale.y, 0);
+
+        RaiseHealthUpdatedEvent(healthPercentage);
+
+        if (healthPercentage <= 0)
         {
-            case Constants.OnGameOverCode:
-                Debug.LogError("Getting Move Command");
-                int tileValue = (int)photonEvent.CustomData;
-
-                break;
-            case Constants.OnOpponentTileMergeCode:
-                Debug.LogError("Opponent Game Initiated");
-                int x = ((int)photonEvent.CustomData);
-                OnGameOver(x);
-                break;
-            case Constants.OnTileCreatedEventReceivedCode:
-                Debug.LogError("Received handshake from Opponent");
-                IsLoadingComplete = true;
-                break;
-
+            OnGameOver(0);
         }
     }
 }

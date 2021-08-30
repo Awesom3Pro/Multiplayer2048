@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using DG.Tweening;
 
 public class ScoreTracker : MonoBehaviour
 {
@@ -24,7 +25,17 @@ public class ScoreTracker : MonoBehaviour
 
     private int highscore;
 
+    private int fillScore = 0;
+
     public TMP_Text scoreLabel;
+
+    public bool IsAttackAllowed
+    {
+        get
+        {
+            return fillScore >= 800;
+        }
+    }
 
     public int Score
     {
@@ -45,8 +56,36 @@ public class ScoreTracker : MonoBehaviour
         }
     }
 
-    private void Awake()
+    public int AttackRefill
     {
-        // retrieve highscore and score
+        get
+        {
+            return fillScore;
+        }
+
+        set
+        {
+            fillScore = value;
+        }
+    }
+
+    public Transform energyScale;
+
+    private const float maxWidth = 1;
+
+    private void Start()
+    {
+        UpdateFillBar();
+    }
+    public void UpdateFillBar()
+    {
+        energyScale.DOScaleY((fillScore / 800.0f) * maxWidth, 0.2f).SetEase(Ease.OutBounce);
+    }
+
+    public void Deployed()
+    {
+        AttackRefill = 0;
+
+        UpdateFillBar();
     }
 }
