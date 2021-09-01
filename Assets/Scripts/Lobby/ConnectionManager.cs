@@ -18,6 +18,9 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         }
     }
     const string KEY_GAME_START_TIME = "gst";
+    const string KEY_PLAYER_MATCHES_PLAYED = "mplay";
+    const string KEY_PLAYER_MATCHES_WON = "mwon";
+
     public static double GameStartTime;
 
     public event Action OnSingleButtonClicked;
@@ -38,6 +41,8 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
 
     Coroutine exitRoomCoroutine;
 
+    [SerializeField] List<PVPPlayerInfo> opponents;
+
     private void Awake()
     {
         if(instance == null)
@@ -49,6 +54,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         {
             Destroy(gameObject);
         }
+        opponents = new List<PVPPlayerInfo>();
     }
 
     public void StartSinglePlayerMode()
@@ -71,6 +77,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     {
         if (PhotonNetwork.IsConnectedAndReady)
         {
+            SetLocalPlayerProperties();
             OnConnectionReadyInvoked?.Invoke();
             Debug.Log("ConnectionManager :: Start :: IsConnectedAndReady : True");
             joinRandomRoomTimestamp = Time.realtimeSinceStartup;
@@ -102,10 +109,26 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     public override void OnConnectedToMaster()
     {
         Debug.Log("ConnectionManager :: OnConnectedToMaster");
+        SetLocalPlayerProperties();
+
         PhotonNetwork.AutomaticallySyncScene = true;
         joinRandomRoomTimestamp = Time.realtimeSinceStartup;
         PhotonNetwork.JoinRandomRoom();
         OnConnectedToMasterInvoked?.Invoke();
+    }
+
+    void SetLocalPlayerProperties()
+    {
+        PlayerData playerData = DataManager.Instance.localPlayerData;
+
+        PhotonNetwork.LocalPlayer.NickName = playerData.playerName;
+        ExitGames.Client.Photon.Hashtable hashtable = new ExitGames.Client.Photon.Hashtable();
+
+        hashtable.Add(KEY_PLAYER_MATCHES_PLAYED, playerData.matchesPlayed);
+        hashtable.Add(KEY_PLAYER_MATCHES_WON, playerData.matchesWon);
+
+        PhotonNetwork.LocalPlayer.SetCustomProperties(hashtable);
+        PhotonNetwork.SendAllOutgoingCommands();
     }
 
     public override void OnCreatedRoom()
@@ -149,6 +172,38 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
             roomJoinedTimestamp = Time.realtimeSinceStartup;
             exitRoomCoroutine = StartCoroutine(ExitRoomAndGoToLooby(roomWaitTimeOut));
         }
+        else
+        {
+            Player[] otherPlayers = PhotonNetwork.PlayerListOthers;
+
+            for (int i = otherPlayers.Length - 1; i >= 0; i--)
+            {
+                AddOpponent(otherPlayers[i]);
+            }
+        }
+    }
+
+    void AddOpponent(Player oppPlayer)
+    {
+        PVPPlayerInfo opponent = opponents.Find((PVPPlayerInfo info) => { return info.playerName == oppPlayer.NickName; });
+
+        if (opponent != null)
+        {
+            Debug.LogErrorFormat("Opponent with name : {0} already added to list", oppPlayer.NickName);
+            return;
+        }
+
+        ExitGames.Client.Photon.Hashtable hashtable = oppPlayer.CustomProperties;
+
+        string name = oppPlayer.NickName;
+
+        string mps = (hashtable[KEY_PLAYER_MATCHES_PLAYED]).ToString();
+        string mws = (hashtable[KEY_PLAYER_MATCHES_WON]).ToString();
+
+        int mp = int.Parse(mps);
+        int mw = int.Parse(mws);
+
+        opponents.Add(new PVPPlayerInfo(name, mp, mw));
     }
 
     IEnumerator ExitRoomAndGoToLooby(float seconds)
@@ -199,6 +254,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         Debug.Log("ConnectionManager :: LeaveRoom");
         PhotonNetwork.LeaveRoom();
         PhotonNetwork.Disconnect();
+        opponents.Clear();
         SceneManager.LoadScene("Lobby");
     }
 
@@ -208,6 +264,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         if(!PhotonNetwork.IsMasterClient)
         {
             Debug.Log("ConnectionManager :: LoadGameScene :: Not MasterClient. Returning from LoadGame method.");
+
             return;
         }
 
@@ -231,6 +288,7 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         {
             StopCoroutine(exitRoomCoroutine);
         }
+        AddOpponent(newPlayer);
 
         Room room = PhotonNetwork.CurrentRoom;
         if (room.PlayerCount == room.MaxPlayers)
@@ -260,5 +318,20 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
             GameStartTime = (double)propertiesThatChanged[KEY_GAME_START_TIME];
             Debug.LogFormat("ConnectionManager :: OnRoomPropertiesUpdate :: {0}", GameStartTime);
         }
+    }
+}
+
+[System.Serializable]
+public class PVPPlayerInfo
+{
+    public string playerName;
+    public int matchesPlayed;
+    public int matchesWon;
+
+    public PVPPlayerInfo(string playerName = "", int matchesPlayed = 0, int matchesWon = 0)
+    {
+        this.playerName = playerName;
+        this.matchesPlayed = matchesPlayed;
+        this.matchesWon = matchesWon;
     }
 }
