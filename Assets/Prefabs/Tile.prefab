@@ -70,7 +70,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_Sprite: {fileID: 21300000, guid: 075d6b77f9c3344b7a816ca2c3c55559, type: 3}
   m_Color: {r: 0.33909366, g: 0.33161265, b: 0.33962262, a: 1}
   m_FlipX: 0
@@ -203,7 +203,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 2
+  m_SortingOrder: 3
   m_Sprite: {fileID: 21300000, guid: 075d6b77f9c3344b7a816ca2c3c55559, type: 3}
   m_Color: {r: 0.28627452, g: 0.60217255, b: 0.69803923, a: 0}
   m_FlipX: 0
@@ -291,7 +291,7 @@ MeshRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 3
+  m_SortingOrder: 4
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!114 &2265629769308773004
 MonoBehaviour:
@@ -384,4 +384,4 @@ MonoBehaviour:
   m_renderer: {fileID: 111407759506336688}
   m_maskType: 0
   _SortingLayerID: 0
-  _SortingOrder: 3
+  _SortingOrder: 4

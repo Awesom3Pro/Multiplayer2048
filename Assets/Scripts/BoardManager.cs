@@ -25,11 +25,24 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     public Transform hpBar;
 
+    [Header("Attack - DMG")]
+    public Transform attackdmgTransform;
+
+    public GameObject attack_btn;
+
+    public GameObject attack_btn_score;
+
+    public GameObject score_btn;
+
+    public TMP_Text attack_dmg_txt;
+
     public GameState state = GameState.None;
 
     public TMP_Text hpText;
 
     public bool IsLoadingComplete;
+
+    private bool IsAttackEnabled;
 
     private List<Tile> emptyTiles = new List<Tile>();
 
@@ -55,6 +68,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     private const float maxWidth = 3.3f;
 
     private int moveIndex;
+
+    private Sequence m_Sequence;
 
     [SerializeField] TextMeshProUGUI timerText;
 
@@ -84,6 +99,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     #region GameStart
     private void OnGameStart()
     {
+        ToggleAttack(false);
         elapsedTime = 0;
 
         moveIndex = 0;
@@ -152,7 +168,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     {
         if (IsLoadingComplete && ScoreTracker.Instance.IsAttackAllowed)
         {
-            StartCoroutine(OnReceivedHealthUpdate(-25, () => { ScoreTracker.Instance.Deployed(); }));
+            ToggleAttack(true);
         }
     }
 
@@ -738,6 +754,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             Debug.LogError("Opponent Wins");
         }
 
+        state = GameState.GameOver;
+
         gameOver.ShowGameOverPopup(num == 1);
     }
 
@@ -782,13 +800,73 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
         hpBar.transform.localScale = new Vector3(Mathf.Clamp(hpBar.transform.localScale.x, 0, 3.3f), hpBar.transform.localScale.y, 0);
 
-        hpText.text = string.Format("Health : {0}%", healthPercentage);
-
         RaiseHealthUpdatedEvent(healthPercentage);
 
         if (healthPercentage <= 0)
         {
+            healthPercentage = 0;
+
             OnGameOver(0);
+        }
+
+        hpText.text = string.Format("Health : {0}%", healthPercentage);
+    }
+
+    private void ToggleAttack(bool toEnable)
+    {
+        if (toEnable)
+        {
+            score_btn.SetActive(true);
+            attack_btn.SetActive(true);
+            attack_btn_score.SetActive(false);
+            attackdmgTransform.localScale = new Vector2(0.1f, attackdmgTransform.localScale.y);
+            deployButtonTransform.gameObject.SetActive(false);
+            IsAttackEnabled = true;
+            DamageRandomAnimation();
+        }
+        else
+        {
+            deployButtonTransform.gameObject.SetActive(true);
+            IsAttackEnabled = false;
+            score_btn.SetActive(false);
+            attack_btn.SetActive(false);
+            attack_btn_score.SetActive(true);
+        }
+    }
+
+    private void DamageRandomAnimation()
+    {
+        if (m_Sequence != null)
+        {
+            m_Sequence.Kill();
+        }
+
+        m_Sequence = DOTween.Sequence();
+
+        m_Sequence.Append(attackdmgTransform.DOScaleX(4, 0.125f)).Append(attackdmgTransform.DOScaleX(0.1f, 0.1f)).SetLoops(-1, LoopType.Yoyo);
+
+        m_Sequence.OnUpdate(() => { attack_dmg_txt.text = string.Format("{0:####}%", (attackdmgTransform.localScale.x / 4.0f) * 25); ; });
+    }
+
+    public void GetDamage()
+    {
+        if (IsAttackEnabled)
+        {
+            IsAttackEnabled = false;
+            
+            m_Sequence.Kill(false);
+
+            float x = attackdmgTransform.localScale.x;
+
+            float dmg = (x / 4.0f) * 25.0f;
+
+            StartCoroutine(OnReceivedHealthUpdate(-dmg, () =>
+            {
+                ToggleAttack(false);
+
+                ScoreTracker.Instance.Deployed();
+
+            }));
         }
     }
 }
