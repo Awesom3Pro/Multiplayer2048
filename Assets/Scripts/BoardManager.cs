@@ -78,6 +78,15 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         if (PlayerPrefs.GetInt("MODE") == 0)
         {
             isSinglePlayer = true;
+
+            if(isSinglePlayer)
+            {
+                deployButtonTransform.gameObject.SetActive(false);
+            }
+            else
+            {
+                deployButtonTransform.gameObject.SetActive(true);
+            }
         }
         InputManager.Instance.OnTouchReceived += ButtonPressed;
 
