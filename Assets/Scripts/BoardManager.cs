@@ -166,9 +166,12 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     public void Deploy()
     {
-        if (IsLoadingComplete && ScoreTracker.Instance.IsAttackAllowed)
+        if (!isSinglePlayer)
         {
-            ToggleAttack(true);
+            if (IsLoadingComplete && ScoreTracker.Instance.IsAttackAllowed)
+            {
+                ToggleAttack(true);
+            }
         }
     }
 
@@ -816,6 +819,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     {
         if (toEnable)
         {
+            state = GameState.Waiting;
+
             score_btn.SetActive(true);
             attack_btn.SetActive(true);
             attack_btn_score.SetActive(false);
@@ -831,6 +836,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
             score_btn.SetActive(false);
             attack_btn.SetActive(false);
             attack_btn_score.SetActive(true);
+
+            state = GameState.Playing;
         }
     }
 
