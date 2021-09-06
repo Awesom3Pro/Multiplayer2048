@@ -90,12 +90,32 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     {
         if (!isSinglePlayer)
             PhotonNetwork.AddCallbackTarget(this);
+
+        if(InputManager.Instance != null)
+            InputManager.Instance.OnIdleTimerCompleted += EndGameAsLoser;
+
+        if (ConnectionManager.Instance != null)
+        {
+            ConnectionManager.Instance.OnPlayerDisconnected += EndGameAsLoser;
+
+            ConnectionManager.Instance.OnLastOpponentLeftRoom += EndGameAsWinner;
+        }
     }
 
     void OnDisable()
     {
         if (!isSinglePlayer)
             PhotonNetwork.RemoveCallbackTarget(this);
+
+        if (InputManager.Instance != null)
+            InputManager.Instance.OnIdleTimerCompleted -= EndGameAsLoser;
+
+        if (ConnectionManager.Instance != null)
+        {
+            ConnectionManager.Instance.OnPlayerDisconnected -= EndGameAsLoser;
+
+            ConnectionManager.Instance.OnLastOpponentLeftRoom -= EndGameAsWinner;
+        }
     }
 
     #region GameStart
@@ -771,6 +791,26 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         state = GameState.GameOver;
 
         gameOver.ShowGameOverPopup(num == 1);
+    }
+
+    void EndGameAsLoser()
+    {
+        Debug.Log("Ending game as loser");
+
+        if (state != GameState.GameOver)
+        {
+            OnGameOver(0);
+        }
+    }
+
+    void EndGameAsWinner()
+    {
+        Debug.Log("Ending game as winner");
+
+        if (state != GameState.GameOver)
+        {
+            OnGameOver(1);
+        }
     }
 
     void UpdateTime()

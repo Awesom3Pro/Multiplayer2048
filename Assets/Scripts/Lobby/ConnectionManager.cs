@@ -32,6 +32,8 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     public event Action OnConnectedInvoked;
     public event Action OnConnectedToMasterInvoked;
     public event Action OnGameToLoad;
+    public event Action OnPlayerDisconnected;
+    public event Action OnLastOpponentLeftRoom;
 
     readonly float joinRandomTImeOut = 2f;
     float joinRandomRoomTimestamp;
@@ -155,6 +157,8 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
     public override void OnDisconnected(DisconnectCause cause)
     {
         Debug.Log("ConnectionManager :: OnDisconnected");
+
+        OnPlayerDisconnected?.Invoke();
     }
 
     public override void OnFriendListUpdate(List<FriendInfo> friendList)
@@ -305,8 +309,8 @@ public class ConnectionManager : MonoBehaviourPunCallbacks//,IConnectionCallback
         Room room = PhotonNetwork.CurrentRoom;
         if (room.PlayerCount <= 1)
         {
-            //TODO: Show win screen/ some UI to denote as last player in room
-            LeaveRoom();
+            OnLastOpponentLeftRoom?.Invoke();
+            //LeaveRoom();
         }
     }
 

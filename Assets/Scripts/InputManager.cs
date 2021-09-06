@@ -29,12 +29,19 @@ public class InputManager : MonoBehaviour
 
     public Action<Direction> OnTouchReceived;
 
+    public event Action OnIdleTimerCompleted;
+
     private float minMoveDistance = 50f;
 
     private Vector2 startPos;
 
     private bool onTouch;
 
+    private readonly float idleTime = 10f;
+
+    private float idleElapsedTime;
+
+    private bool idleTimeActionInvoked = false;
     // Update is called once per frame
     void Update()
     {
@@ -43,11 +50,15 @@ public class InputManager : MonoBehaviour
             startPos = Input.mousePosition;
 
             onTouch = true;
+
+            idleElapsedTime = 0f;
         }
         if (onTouch)
         {
             if (Mathf.Abs(Input.mousePosition.magnitude - startPos.magnitude) > minMoveDistance)
             {
+                idleElapsedTime = 0f;
+
                 Vector2 endPos = Input.mousePosition;
 
                 Vector2 difference = endPos - startPos;
@@ -91,6 +102,18 @@ public class InputManager : MonoBehaviour
                 OnTouchReceived?.Invoke(Direction.Tap);
             }
             onTouch = false;
+
+            idleElapsedTime = 0f;
+        }
+
+        idleElapsedTime += Time.deltaTime;
+        if(!idleTimeActionInvoked && idleElapsedTime >= idleTime)
+        {
+            Debug.Log("Player has reached idle timeout");
+
+            OnIdleTimerCompleted?.Invoke();
+
+            idleTimeActionInvoked = true;
         }
     }
 }
