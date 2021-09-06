@@ -6,6 +6,7 @@ using ExitGames.Client.Photon;
 using Newtonsoft.Json;
 using Photon.Pun;
 using Photon.Realtime;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -39,6 +40,10 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
     private bool isSinglePlayer;
 
     public Transform hpBar;
+
+    public Transform bomb;
+
+    public TMP_Text dmgText;
 
     public TMPro.TMP_Text hpText;
 
@@ -321,8 +326,7 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
     }
 
     private IEnumerator MakeOneLineMoveUp(Tile[] tiles, int index)
-    {
-        Debug.LogError(index);
+    { 
         animationComplete[index] = false;
 
         while (MakeOneMoveUp(tiles))
@@ -468,13 +472,36 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
 
     private void UpdateHealth(float dmg)
     {
-        healthPoints = dmg;
+        float x = healthPoints - dmg;
 
-        hpBar.DOScaleX((healthPoints / 100) * 3.3f, 0.3f);
+        MoveTheBomb(x,() =>
+        {
+            healthPoints = dmg;
 
-        hpBar.transform.localScale = new Vector3(Mathf.Clamp(hpBar.transform.localScale.x, 0, 3.3f), hpBar.transform.localScale.y, 0);
+            hpBar.DOScaleX((healthPoints / 100) * 3.3f, 0.3f);
 
-        hpText.text = string.Format("Health : {0}%", healthPoints);
+            hpBar.transform.localScale = new Vector3(Mathf.Clamp(hpBar.transform.localScale.x, 0, 3.3f), hpBar.transform.localScale.y, 0);
+
+            hpText.text = string.Format("Health : {0}%", healthPoints);
+
+        });
+    }
+
+    private void MoveTheBomb(float inflicted_dmg, Action action)
+    {
+        dmgText.text = inflicted_dmg.ToString();
+
+        bomb.gameObject.SetActive(true);
+
+        bomb.localScale = new Vector3(0.4f, 0.4f, 1);
+
+        bomb.position = Vector3.zero;
+
+
+
+        bomb.DOMove(hpBar.position, 1f);
+
+        bomb.DOScale(new Vector3(1.2f, 1.2f, 1), 0.4f).OnComplete(() => { bomb.DOScale(Vector3.zero, 0.7f).OnComplete(() => { action?.Invoke(); bomb.gameObject.SetActive(false); }); });
     }
 
     public void OnEvent(EventData photonEvent)
@@ -482,14 +509,12 @@ public class OpponentBoardManager : MonoBehaviour, IOnEventCallback
         switch (photonEvent.Code)
         {
             case Constants.TileCreatedEventCode:
-                Debug.LogError("Getting Move Command");
                 MessageStruc tileValue = JsonConvert.DeserializeObject<MessageStruc>((string)photonEvent.CustomData);
                 queueMoves.Add(tileValue);
                 OnRaiseEventHandshake(true);
                 PlayQueue();
                 break;
             case Constants.OnGameStartEventCode:
-                Debug.LogError("Opponent Game Initiated");
                 GameStartStruc startValues = JsonConvert.DeserializeObject<GameStartStruc>((string)photonEvent.CustomData);
                 OnGameStart(startValues.tileIndex, startValues.tileValues);
                 OnRaiseEventHandshakeGameStart();

@@ -66,13 +66,29 @@ public class ScoreTracker : MonoBehaviour
         set
         {
             fillScore = value;
+
+            if (fillScore >= 800)
+            {
+                es.color = color_full;
+            }
         }
     }
 
     public Transform energyScale;
 
+    [Header("ColorSchemes")]
+    public Color color_full;
+
+    public Color color_filling;
+
     private const float maxWidth = 1;
 
+    private SpriteRenderer es;
+
+    private void Awake()
+    {
+        es = energyScale.GetComponent<SpriteRenderer>();
+    }
     private void Start()
     {
         UpdateFillBar();
@@ -87,5 +103,7 @@ public class ScoreTracker : MonoBehaviour
         AttackRefill = 0;
 
         UpdateFillBar();
+
+        es.color = color_filling;
     }
 }

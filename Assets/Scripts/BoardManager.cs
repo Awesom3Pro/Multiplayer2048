@@ -36,6 +36,8 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
     public TMP_Text attack_dmg_txt;
 
+    public Transform text_Click;
+
     public GameState state = GameState.None;
 
     public TMP_Text hpText;
@@ -77,16 +79,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     {
         if (PlayerPrefs.GetInt("MODE") == 0)
         {
-            isSinglePlayer = true;
-
-            if(isSinglePlayer)
-            {
-                deployButtonTransform.gameObject.SetActive(false);
-            }
-            else
-            {
-                deployButtonTransform.gameObject.SetActive(true);
-            }
+            isSinglePlayer = true;    
         }
         InputManager.Instance.OnTouchReceived += ButtonPressed;
 
@@ -108,7 +101,6 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
     #region GameStart
     private void OnGameStart()
     {
-        ToggleAttack(false);
         elapsedTime = 0;
 
         moveIndex = 0;
@@ -164,6 +156,16 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         {
             IsLoadingComplete = true;
             state = GameState.Playing;
+            ToggleAttack(false);
+
+            if (isSinglePlayer)
+            {
+                deployButtonTransform.gameObject.SetActive(false);
+            }
+            else
+            {
+                deployButtonTransform.gameObject.SetActive(true);
+            }
 
         }));
     }
@@ -859,7 +861,7 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
 
         m_Sequence = DOTween.Sequence();
 
-        m_Sequence.Append(attackdmgTransform.DOScaleX(4, 0.125f)).Append(attackdmgTransform.DOScaleX(0.1f, 0.1f)).SetLoops(-1, LoopType.Yoyo);
+        m_Sequence.Append(attackdmgTransform.DOScaleX(4, 0.125f)).Join(text_Click.DOScale(new Vector2(1.75f,1.75f), 0.1f)).Append(text_Click.DOScale(new Vector2(0.95f,0.95f), 0.1f)).Join(attackdmgTransform.DOScaleX(0.1f, 0.1f)).SetLoops(-1, LoopType.Yoyo);
 
         m_Sequence.OnUpdate(() => { attack_dmg_txt.text = string.Format("{0:####}%", (attackdmgTransform.localScale.x / 4.0f) * 25); ; });
     }
@@ -869,12 +871,12 @@ public class BoardManager : MonoBehaviour, IOnEventCallback
         if (IsAttackEnabled)
         {
             IsAttackEnabled = false;
-            
+
             m_Sequence.Kill(false);
 
             float x = attackdmgTransform.localScale.x;
 
-            float dmg = (x / 4.0f) * 25.0f;
+            float dmg = Mathf.RoundToInt((x / 4.0f) * 25.0f);
 
             StartCoroutine(OnReceivedHealthUpdate(-dmg, () =>
             {
